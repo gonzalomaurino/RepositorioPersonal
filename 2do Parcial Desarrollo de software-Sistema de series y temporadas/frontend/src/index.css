@@ -1,0 +1,59 @@
+/* index.css */
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f8f9fa; /* fondo claro */
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: #212529;
+}
+
+/* Enlaces */
+a {
+  font-weight: 500;
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #0a58ca;
+  text-decoration: underline;
+}
+
+/* Botones */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #0d6efd;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.25s, border-color 0.25s;
+}
+
+button:hover {
+  background-color: #0b5ed7;
+}
+
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Encabezados */
+h1, h2, h3, h4, h5 {
+  font-weight: 600;
+  color: #212529;
+}
+
+/* Estilo para tablas opcional */
+table th,
+table td {
+  vertical-align: middle;
+  text-align: center;
+}

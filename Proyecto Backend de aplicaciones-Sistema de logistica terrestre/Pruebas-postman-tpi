@@ -1,0 +1,625 @@
+{
+	"info": {
+		"_postman_id": "62215cfe-8460-41e3-abe1-863f1706d6fe",
+		"name": "TPI Backend - Colección Ejecutable",
+		"description": "Colección ejecutable con autenticación para CLIENTE, OPERADOR y TRANSPORTISTA. Incluye los escenarios S1, S2 y S3.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45339799"
+	},
+	"item": [
+		{
+			"name": "📋 S1 - CLIENTE: Crear Solicitud y Seguimiento",
+			"item": [
+				{
+					"name": "Obtener Token - CLIENTE",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    var token = jsonData.access_token;",
+									"    if (token) {",
+									"        pm.environment.set('authToken', token);",
+									"        pm.collectionVariables.set('authToken', token);",
+									"        console.log('✅ Token CLIENTE guardado correctamente');",
+									"        console.log('   Token: ' + token.substring(0, 30) + '...');",
+									"    } else {",
+									"        console.log('❌ Error: No se recibió access_token en la respuesta');",
+									"    }",
+									"} else {",
+									"    console.log('❌ Error al obtener token. Status: ' + pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "tpi-client"
+								},
+								{
+									"key": "username",
+									"value": "cliente@tpi.com"
+								},
+								{
+									"key": "password",
+									"value": "cliente123"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:9090/realms/tpi-backend/protocol/openid-connect/token",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9090",
+							"path": [
+								"realms",
+								"tpi-backend",
+								"protocol",
+								"openid-connect",
+								"token"
+							]
+						},
+						"description": "Keycloak autentica al cliente y devuelve un JWT. El API Gateway usará este token en el header Authorization: Bearer <JWT>."
+					},
+					"response": []
+				},
+				{
+					"name": "S1-1 - Crear solicitud completa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"numeroSeguimiento\": \"CLI-2025-120\",\n  \"origenDireccion\": \"Córdoba, Argentina\",\n  \"origenLatitud\": -31.4201,\n  \"origenLongitud\": -64.1888,\n  \"destinoDireccion\": \"Buenos Aires, Argentina\",\n  \"destinoLatitud\": -34.6037,\n  \"destinoLongitud\": -58.3816,\n  \"clienteNombre\": \"Carlos\",\n  \"clienteApellido\": \"Cliente\",\n  \"clienteEmail\": \"chupete4@gmail.com\",\n  \"clienteTelefono\": \"+54 341 5555545\",\n  \"clienteCuil\": \"20-11121111-1\",\n  \"codigoIdentificacion\": \"CONT-CLI-222\",\n  \"peso\": 3000.0,\n  \"volumen\": 35.0\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/solicitudes/completa",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"solicitudes",
+								"completa"
+							]
+						},
+						"description": "El Gateway valida el JWT con Keycloak y enruta al microservicio de Logística. Logística crea cliente/contenedor si corresponde y deja la solicitud en estado inicial."
+					},
+					"response": []
+				},
+				{
+					"name": "S1-2 - Consultar estado del contenedor",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/gestion/contenedores/201/estado",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"gestion",
+								"contenedores",
+								"201",
+								"estado"
+							]
+						},
+						"description": "El cliente puede consultar el estado de sus contenedores. El servicio de Gestión consulta al servicio de Logística para obtener la información de tramos."
+					},
+					"response": []
+				},
+				{
+					"name": "S1-3 - Consultar seguimiento por número",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/solicitudes/seguimiento/CLI-2025-120",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"solicitudes",
+								"seguimiento",
+								"CLI-2025-120"
+							]
+						},
+						"description": "El cliente solo puede ver sus propias solicitudes. El microservicio de Logística arma el DTO con info de tramos y contenedor."
+					},
+					"response": []
+				}
+			],
+			"description": "Cliente registra una solicitud completa y consulta el estado del contenedor y seguimiento de la solicitud."
+		},
+		{
+			"name": "🔧 S2 - OPERADOR: Estimar, Asignar Ruta y Camión",
+			"item": [
+				{
+					"name": "Obtener Token - OPERADOR",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    var token = jsonData.access_token;",
+									"    if (token) {",
+									"        pm.environment.set('authToken', token);",
+									"        pm.collectionVariables.set('authToken', token);",
+									"        console.log('✅ Token OPERADOR guardado correctamente');",
+									"        console.log('   Token: ' + token.substring(0, 30) + '...');",
+									"    } else {",
+									"        console.log('❌ Error: No se recibió access_token en la respuesta');",
+									"    }",
+									"} else {",
+									"    console.log('❌ Error al obtener token. Status: ' + pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "tpi-client"
+								},
+								{
+									"key": "username",
+									"value": "operador@tpi.com"
+								},
+								{
+									"key": "password",
+									"value": "operador123"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:9090/realms/tpi-backend/protocol/openid-connect/token",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9090",
+							"path": [
+								"realms",
+								"tpi-backend",
+								"protocol",
+								"openid-connect",
+								"token"
+							]
+						},
+						"description": "Autentica al operador en Keycloak para obtener acceso completo al sistema."
+					},
+					"response": []
+				},
+				{
+					"name": "S2-1 - Estimar ruta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"origenLatitud\": -31.4201,\n  \"origenLongitud\": -64.1888,\n  \"destinoLatitud\": -34.6037,\n  \"destinoLongitud\": -58.3816,\n  \"pesoKg\": 3000.0,\n  \"volumenM3\": 35.0\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/solicitudes/estimar-ruta",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"solicitudes",
+								"estimar-ruta"
+							]
+						},
+						"description": "Endpoint reservado a operador para estimar costos y tramos de una ruta."
+					},
+					"response": []
+				},
+				{
+					"name": "S2-2 - Asignar ruta a solicitud",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"origenLatitud\": -31.4201,\n  \"origenLongitud\": -64.1888,\n  \"destinoLatitud\": -34.6037,\n  \"destinoLongitud\": -58.3816,\n  \"pesoKg\": 3000.0,\n  \"volumenM3\": 35.0\n}"
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/solicitudes/11/asignar-ruta",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"solicitudes",
+								"11",
+								"asignar-ruta"
+							]
+						},
+						"description": "El endpoint /asignar-ruta crea automáticamente la ruta y los tramos asociados. La solicitud cambia a estado PROGRAMADA."
+					},
+					"response": []
+				},
+				{
+					"name": "S2-4-Obtener ID ruta",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/rutas/solicitud/11",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"rutas",
+								"solicitud",
+								"11"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "S2-5-Obtener ID tramo",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/tramos/ruta/3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"tramos",
+								"ruta",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "S2-3 - Asignar camión a tramo",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/tramos/2/asignar-camion?patente=ABC123&peso=3000&volumen=25",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"tramos",
+								"2",
+								"asignar-camion"
+							],
+							"query": [
+								{
+									"key": "patente",
+									"value": "ABC123"
+								},
+								{
+									"key": "peso",
+									"value": "3000"
+								},
+								{
+									"key": "volumen",
+									"value": "25"
+								}
+							]
+						},
+						"description": "El servicio de Logística valida disponibilidad y capacidad del camión llamando al microservicio de Flota. Si todo está OK, el tramo queda ASIGNADO."
+					},
+					"response": []
+				}
+			],
+			"description": "Operador toma una solicitud pendiente, estima ruta, crea la ruta en el sistema y asigna un camión respetando reglas de negocio."
+		},
+		{
+			"name": "🚚 S3 - TRANSPORTISTA: Iniciar y Finalizar Tramo",
+			"item": [
+				{
+					"name": "Obtener Token - TRANSPORTISTA",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    var token = jsonData.access_token;",
+									"    if (token) {",
+									"        pm.environment.set('authToken', token);",
+									"        pm.collectionVariables.set('authToken', token);",
+									"        console.log('✅ Token TRANSPORTISTA guardado correctamente');",
+									"        console.log('   Token: ' + token.substring(0, 30) + '...');",
+									"    } else {",
+									"        console.log('❌ Error: No se recibió access_token en la respuesta');",
+									"    }",
+									"} else {",
+									"    console.log('❌ Error al obtener token. Status: ' + pm.response.code);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "grant_type",
+									"value": "password"
+								},
+								{
+									"key": "client_id",
+									"value": "tpi-client"
+								},
+								{
+									"key": "username",
+									"value": "transportista@tpi.com"
+								},
+								{
+									"key": "password",
+									"value": "transportista123"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:9090/realms/tpi-backend/protocol/openid-connect/token",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "9090",
+							"path": [
+								"realms",
+								"tpi-backend",
+								"protocol",
+								"openid-connect",
+								"token"
+							]
+						},
+						"description": "Autentica al transportista para poder gestionar sus tramos asignados."
+					},
+					"response": []
+				},
+				{
+					"name": "S3-1 - Ver tramos asignados",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/tramos/camion/ABC123",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"tramos",
+								"camion",
+								"ABC123"
+							]
+						},
+						"description": "El transportista ve solo los tramos del camión que maneja."
+					},
+					"response": []
+				},
+				{
+					"name": "S3-2 - Iniciar tramo",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/tramos/2/iniciar",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"tramos",
+								"2",
+								"iniciar"
+							]
+						},
+						"description": "Registra el inicio real del tramo. Solo puede hacerlo el transportista asignado o el operador."
+					},
+					"response": []
+				},
+				{
+					"name": "S3-3 - Finalizar tramo",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8080/api/logistica/tramos/2/finalizar?kmReales=715.5&costoKmCamion=120&consumoCamion=0.3",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"logistica",
+								"tramos",
+								"2",
+								"finalizar"
+							],
+							"query": [
+								{
+									"key": "kmReales",
+									"value": "715.5"
+								},
+								{
+									"key": "costoKmCamion",
+									"value": "120"
+								},
+								{
+									"key": "consumoCamion",
+									"value": "0.3"
+								}
+							]
+						},
+						"description": "Registra el fin del tramo con datos reales. Recalcula el costo real del tramo y actualiza también el costo/tiempo real de la solicitud."
+					},
+					"response": []
+				}
+			],
+			"description": "Transportista ve sus tramos asignados y registra inicio y fin de viaje."
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{authToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

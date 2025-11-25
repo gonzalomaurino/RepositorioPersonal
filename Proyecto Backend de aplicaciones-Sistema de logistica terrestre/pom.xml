@@ -1,0 +1,23 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.tpi</groupId>
+  <artifactId>tpi-backend-parent</artifactId>
+  <version>1.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+
+  <name>TPI Backend Parent</name>
+  <description>Aggregator POM for all backend modules</description>
+
+  <modules>
+    <module>servicio-gestion</module>
+    <module>servicio-flota</module>
+    <module>servicio-logistica</module>
+    <module>api-gateway</module>
+  </modules>
+
+</project>
+

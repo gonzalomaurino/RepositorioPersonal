@@ -1,0 +1,6 @@
+com\tpi\flota\modelo\Camion$CamionBuilder.class
+com\tpi\flota\servicio\CamionServicio.class
+com\tpi\flota\modelo\Camion.class
+com\tpi\flota\repositorio\CamionRepositorio.class
+com\tpi\flota\controlador\CamionControlador.class
+com\tpi\flota\ServicioFlotaApplication.class

@@ -1,0 +1,29 @@
+package com.tpi.flota.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+
+/**
+ * Configuración del JWT Decoder sin validación de issuer.
+ * Solo valida la firma del token usando las claves públicas de Keycloak.
+ */
+@Configuration
+public class JwtDecoderConfig {
+
+    @Bean
+    @Primary
+    public JwtDecoder jwtDecoder(@Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}") String jwkSetUri) {
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        
+        // Deshabilitar validación de issuer - solo validar firma
+        jwtDecoder.setJwtValidator(jwt -> 
+            org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success()
+        );
+        
+        return jwtDecoder;
+    }
+}

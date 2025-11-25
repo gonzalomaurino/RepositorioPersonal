@@ -1,0 +1,16 @@
+main {
+    flex: 1;
+    min-height: 1200px;
+    background-image: url('../assets/images/mapa-cordoba.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-attachment: fixed;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 5px;
+}
+
+main > section:last-of-type {
+  margin-top: auto; /* empuja el botón hacia abajo */
+}

@@ -1,0 +1,213 @@
+# =====================================================
+# DOCKER COMPOSE - GESTIÓN DE CONTENEDORES TPI
+# =====================================================
+# 
+# Este archivo levanta:
+# - PostgreSQL con la BD bd-tpi-backend
+# - Keycloak (Autenticación y Autorización)
+# - API Gateway (Puerto 8080 - Entrada única)
+# - Servicio Gestión (Puerto 8081 - interno)
+# - Servicio Flota (Puerto 8082 - interno)
+# - Servicio Logística (Puerto 8083 - interno)
+#
+# COMANDOS:
+# - Iniciar: docker-compose up -d
+# - Ver logs: docker-compose logs -f
+# - Detener: docker-compose down
+# - Detener y borrar datos: docker-compose down -v
+# =====================================================
+
+services:
+  # ============================================================
+  # BASE DE DATOS POSTGRESQL
+  # ============================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: tpi-postgres
+    environment:
+      POSTGRES_DB: bd-tpi-backend
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Script de inicialización que crea schemas y carga datos
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+      # Persistencia de datos
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - tpi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d bd-tpi-backend"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================
+  # KEYCLOAK - AUTENTICACIÓN Y AUTORIZACIÓN
+  # ============================================================
+  keycloak:
+    build:
+      context: ./keycloak
+      dockerfile: Dockerfile
+    container_name: tpi-keycloak
+    command:
+      - start-dev
+      - --health-enabled=true
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin123}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/bd-tpi-backend
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      KC_DB_SCHEMA: public
+      KC_HTTP_PORT: 9090
+      KC_HOSTNAME_STRICT: false
+      KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HTTP_ENABLED: true
+      KC_HEALTH_ENABLED: true
+    ports:
+      - "9090:9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tpi-network
+    healthcheck:
+      # Verificar que Keycloak esté respondiendo
+      # Usamos una verificación TCP simple que funciona sin herramientas adicionales
+      # El endpoint raíz de Keycloak responde cuando el servidor está listo
+      test: ["CMD-SHELL", "timeout 5 bash -c 'until (exec 3<>/dev/tcp/localhost/9090) 2>/dev/null; do sleep 1; done' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    restart: unless-stopped
+
+  # ============================================================
+  # API GATEWAY - ENTRADA ÚNICA AL SISTEMA (Puerto 8080)
+  # ============================================================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: tpi-gateway
+    environment:
+      GATEWAY_PORT: 8080
+      SERVICIO_GESTION_URL: http://servicio-gestion:8081
+      SERVICIO_FLOTA_URL: http://servicio-flota:8082
+      SERVICIO_LOGISTICA_URL: http://servicio-logistica:8083
+      KEYCLOAK_URL: http://keycloak:9090
+      KEYCLOAK_ISSUER_URI: http://localhost:9090/realms/tpi-backend
+      KEYCLOAK_JWK_SET_URI: http://keycloak:9090/realms/tpi-backend/protocol/openid-connect/certs
+      GATEWAY_LOG_LEVEL: INFO
+      SECURITY_LOG_LEVEL: DEBUG
+    ports:
+      - "8080:8080"
+    depends_on:
+      keycloak:
+        condition: service_started  # Cambiado temporalmente de service_healthy a service_started
+      servicio-gestion:
+        condition: service_started
+      servicio-flota:
+        condition: service_started
+      servicio-logistica:
+        condition: service_started
+    networks:
+      - tpi-network
+    restart: unless-stopped
+
+  # ============================================================
+  # MICROSERVICIO: GESTIÓN (Puerto 8081 - interno)
+  # ============================================================
+  servicio-gestion:
+    build:
+      context: ./servicio-gestion
+      dockerfile: Dockerfile
+    container_name: tpi-gestion
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bd-tpi-backend?currentSchema=gestion
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tpi-network
+    restart: unless-stopped
+
+  # ============================================================
+  # MICROSERVICIO: FLOTA (Puerto 8082 - interno)
+  # ============================================================
+  servicio-flota:
+    build:
+      context: ./servicio-flota
+      dockerfile: Dockerfile
+    container_name: tpi-flota
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bd-tpi-backend?currentSchema=flota
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SERVER_PORT: 8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tpi-network
+    restart: unless-stopped
+
+  # ============================================================
+  # MICROSERVICIO: LOGÍSTICA (Puerto 8083 - interno)
+  # ============================================================
+  servicio-logistica:
+    build:
+      context: ./servicio-logistica
+      dockerfile: Dockerfile
+    container_name: tpi-logistica
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bd-tpi-backend?currentSchema=logistica
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+      SERVER_PORT: 8083
+      # URLs de otros microservicios (dentro de Docker network)
+      SERVICIO_GESTION_URL: http://servicio-gestion:8081/api/gestion
+      SERVICIO_FLOTA_URL: http://servicio-flota:8082/api/flota
+      # Google Maps API Key
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-AIzaSyDlQYVvd-umbnNaucd8P990P7cgkyGCDsU}
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      servicio-gestion:
+        condition: service_started
+      servicio-flota:
+        condition: service_started
+    networks:
+      - tpi-network
+    restart: unless-stopped
+
+# ============================================================
+# REDES
+# ============================================================
+networks:
+  tpi-network:
+    driver: bridge
+    name: tpi-network
+
+# ============================================================
+# VOLÚMENES (persistencia de datos)
+# ============================================================
+volumes:
+  postgres-data:
+    name: tpi-postgres-data
